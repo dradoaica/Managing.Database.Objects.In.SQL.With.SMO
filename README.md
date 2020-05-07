@@ -1,1 +1,1 @@
-# SimpleSMO
+# simple-smo
