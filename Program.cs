@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,16 +16,16 @@ namespace SimpleSMO
         private static readonly string DROP_CONSTRAINT = "ALTER TABLE {0} DROP CONSTRAINT {1}";
         private static readonly string ADD_PK_CONSTRAINT = "ALTER TABLE {0} ADD CONSTRAINT {1} PRIMARY KEY ({2})";
         private static readonly string ADD_FK_CONSTRAINT = "ALTER TABLE {0} ADD CONSTRAINT {1} FOREIGN KEY ({2}) REFERENCES {3} ({4})";
-        private static readonly FileStream _dropfksfs = new FileStream(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dropfks.sql"), FileMode.Create, FileAccess.Write);
-        private static readonly StreamWriter _dropfksw = new StreamWriter(_dropfksfs);
-        private static readonly FileStream _droppksfs = new FileStream(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "droppks.sql"), FileMode.Create, FileAccess.Write);
-        private static readonly StreamWriter _droppksw = new StreamWriter(_droppksfs);
-        private static readonly FileStream _addpksfs = new FileStream(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "addpks.sql"), FileMode.Create, FileAccess.Write);
-        private static readonly StreamWriter _addpksw = new StreamWriter(_addpksfs);
-        private static readonly FileStream _addfksfs = new FileStream(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "addfks.sql"), FileMode.Create, FileAccess.Write);
-        private static readonly StreamWriter _addfksw = new StreamWriter(_addfksfs);
-        private static readonly FileStream _spsfs = new FileStream(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "sps.sql"), FileMode.Create, FileAccess.Write);
-        private static readonly StreamWriter _spsw = new StreamWriter(_spsfs);
+        private static readonly FileStream _dropfksfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dropfks.sql"), FileMode.Create, FileAccess.Write);
+        private static readonly StreamWriter _dropfksw = new(_dropfksfs);
+        private static readonly FileStream _droppksfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "droppks.sql"), FileMode.Create, FileAccess.Write);
+        private static readonly StreamWriter _droppksw = new(_droppksfs);
+        private static readonly FileStream _addpksfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "addpks.sql"), FileMode.Create, FileAccess.Write);
+        private static readonly StreamWriter _addpksw = new(_addpksfs);
+        private static readonly FileStream _addfksfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "addfks.sql"), FileMode.Create, FileAccess.Write);
+        private static readonly StreamWriter _addfksw = new(_addfksfs);
+        private static readonly FileStream _spsfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "sps.sql"), FileMode.Create, FileAccess.Write);
+        private static readonly StreamWriter _spsw = new(_spsfs);
 
         private static void ProcessLevel(Level lvl, Database db, Server srv)
         {
@@ -37,12 +37,12 @@ namespace SimpleSMO
                     Index oldpk = table.Indexes.Cast<Index>().FirstOrDefault(index => index.IndexKeyType == IndexKeyType.DriPrimaryKey);
                     if (oldpk != null && oldpk.IndexedColumns.Count < 2)
                     {
-                        DependencyWalker dw = new DependencyWalker(srv);
+                        DependencyWalker dw = new(srv);
                         DependencyTree dependencies = dw.DiscoverDependencies(new SqlSmoObject[] { table }, DependencyType.Children);
                         DependencyTreeNode current = dependencies.FirstChild.FirstChild;
 
-                        List<ForeignKey> oldfks = new List<ForeignKey>();
-                        List<ForeignKey> newfks = new List<ForeignKey>();
+                        List<ForeignKey> oldfks = new();
+                        List<ForeignKey> newfks = new();
 
                         _spsw.WriteLine();
                         _spsw.Write(table.Name + ":");
@@ -63,7 +63,7 @@ namespace SimpleSMO
                                     {
                                         _dropfksw.WriteLine(string.Format(DROP_CONSTRAINT, dependency.Name, oldfk.Name));
 
-                                        ForeignKey newfk = new ForeignKey(dependency, oldfk.Name);
+                                        ForeignKey newfk = new(dependency, oldfk.Name);
 
                                         string columns1 = string.Empty;
                                         string columns2 = string.Empty;
@@ -133,7 +133,7 @@ namespace SimpleSMO
 
                         _droppksw.WriteLine(string.Format(DROP_CONSTRAINT, table.Name, oldpk.Name));
 
-                        Index newpk = new Index(table, oldpk.Name);
+                        Index newpk = new(table, oldpk.Name);
 
                         string columns = string.Empty;
                         bool first = true;
@@ -219,14 +219,14 @@ namespace SimpleSMO
                 .AddJsonFile("appsettings.json", true, true)
                 .Build();
 
-            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(config.GetConnectionString("db"));
-            SqlConnection sqlconn = new SqlConnection(builder.ConnectionString);
-            ServerConnection conn = new ServerConnection(sqlconn);
-            Server srv = new Server(conn);
+            SqlConnectionStringBuilder builder = new(config.GetConnectionString("db"));
+            SqlConnection sqlconn = new(builder.ConnectionString);
+            ServerConnection conn = new(sqlconn);
+            Server srv = new(conn);
             Database db = srv.Databases[builder.InitialCatalog];
 
             Level lvl0;
-            List<Level> list = new List<Level>();
+            List<Level> list = new();
 
             lvl0 = new Level("Table1");
             list.Add(lvl0);
@@ -245,7 +245,7 @@ namespace SimpleSMO
             _spsw.Flush(); _spsfs.Flush(); _spsw.Close(); _spsfs.Close();
 
             Console.WriteLine("Press enter to close...");
-            Console.ReadLine();
+            _ = Console.ReadLine();
         }
     }
 }
