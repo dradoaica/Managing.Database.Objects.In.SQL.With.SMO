@@ -7,9 +7,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Index = Microsoft.SqlServer.Management.Smo.Index;
+using IndexSmo = Microsoft.SqlServer.Management.Smo.Index;
+using DatabaseSmo = Microsoft.SqlServer.Management.Smo.Database;
 
-namespace SimpleSMO
+namespace Managing.Database.Objects.In.SQL.With.SMO
 {
     internal class Program
     {
@@ -27,14 +28,14 @@ namespace SimpleSMO
         private static readonly FileStream _spsfs = new(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "sps.sql"), FileMode.Create, FileAccess.Write);
         private static readonly StreamWriter _spsw = new(_spsfs);
 
-        private static void ProcessLevel(Level lvl, Database db, Server srv)
+        private static void ProcessLevel(Level lvl, DatabaseSmo db, Server srv)
         {
             foreach (Level level in lvl.Levels)
             {
                 Table table = db.Tables[level.Name];
                 if (table != null)
                 {
-                    Index oldpk = table.Indexes.Cast<Index>().FirstOrDefault(index => index.IndexKeyType == IndexKeyType.DriPrimaryKey);
+                    IndexSmo oldpk = table.Indexes.Cast<IndexSmo>().FirstOrDefault(index => index.IndexKeyType == IndexKeyType.DriPrimaryKey);
                     if (oldpk != null && oldpk.IndexedColumns.Count < 2)
                     {
                         DependencyWalker dw = new(srv);
@@ -133,7 +134,7 @@ namespace SimpleSMO
 
                         _droppksw.WriteLine(string.Format(DROP_CONSTRAINT, table.Name, oldpk.Name));
 
-                        Index newpk = new(table, oldpk.Name);
+                        IndexSmo newpk = new(table, oldpk.Name);
 
                         string columns = string.Empty;
                         bool first = true;
@@ -223,7 +224,7 @@ namespace SimpleSMO
             SqlConnection sqlconn = new(builder.ConnectionString);
             ServerConnection conn = new(sqlconn);
             Server srv = new(conn);
-            Database db = srv.Databases[builder.InitialCatalog];
+            DatabaseSmo db = srv.Databases[builder.InitialCatalog];
 
             Level lvl0;
             List<Level> list = new();

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SimpleSMO
+namespace Managing.Database.Objects.In.SQL.With.SMO
 {
     public class Level
     {
